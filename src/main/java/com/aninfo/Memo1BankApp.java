@@ -73,17 +73,6 @@ public class Memo1BankApp {
 		accountService.deleteById(cbu);
 	}
 
-	@PutMapping("/accounts/{cbu}/withdraw")
-	public Account withdraw(@PathVariable Long cbu, @RequestParam Double sum) {
-		return accountService.withdraw(cbu, sum);
-	}
-
-	@PutMapping("/accounts/{cbu}/deposit")
-	public Account deposit(@PathVariable Long cbu, @RequestParam Double sum) {
-		return accountService.deposit(cbu, sum);
-	}
-
-
 
 	@Bean
 	public Docket apiDocket() {
@@ -103,9 +92,11 @@ public class Memo1BankApp {
 	public Transaction createTransaction(@RequestBody Transaction transaction) {
 		return transactionService.createTransaction(transaction);
 	}
-	@GetMapping("/transactions")
-	public Collection<Transaction> getTransactions() {
-		return transactionService.getTransactions();
+
+
+	@GetMapping("/transactions/{cbu}")
+	public Collection<Transaction> getTransactionsByCbu( Long cbu) {
+		return transactionService.getTransactionsByCbu(cbu);
 	}
 
 	@GetMapping("/transactions/{id}")
@@ -114,21 +105,15 @@ public class Memo1BankApp {
 		return ResponseEntity.of(transactionOptional);
 	}
 
-	@PutMapping("/transactions/{id}")
-	public ResponseEntity<Transaction> updateTransaction(@RequestBody Transaction transaction, @PathVariable Long id) {
-		Optional<Transaction> transactionOptional = transactionService.findById(id);
-
-		if (!transactionOptional.isPresent()) {
-			return ResponseEntity.notFound().build();
-		}
-		transaction.setId(id);
-		transactionService.save(transaction);
-		return ResponseEntity.ok().build();
-	}
-
 	@DeleteMapping("/transactions/{id}")
 	public void deleteTransaction(@PathVariable Long id) {
 		transactionService.deleteById(id);
 	}
+
+	@GetMapping("/transactions")
+	public Collection<Transaction> getTransactions() {
+		return transactionService.getTransactions();
+	}
+
 
 }

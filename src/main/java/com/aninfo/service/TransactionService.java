@@ -2,6 +2,7 @@ package com.aninfo.service;
 
 import com.aninfo.exceptions.DepositNegativeSumException;
 import com.aninfo.exceptions.InsufficientFundsException;
+import com.aninfo.exceptions.InvalidTransactionTypeException;
 import com.aninfo.model.Account;
 import com.aninfo.model.Transaction;
 import com.aninfo.repository.AccountRepository;
@@ -9,9 +10,7 @@ import com.aninfo.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
-import java.util.Collection;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class TransactionService {
@@ -19,16 +18,62 @@ public class TransactionService {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private AccountRepository accountRepository;
+
     public Transaction createTransaction(Transaction transaction) {
-        return transactionRepository.save(transaction);
+
+        double amount = transaction.getAmount();
+
+        if (amount <= 0){
+            throw new DepositNegativeSumException("Cannot deposit negative sums");
+        }
+
+        long associatedCbu = transaction.getAssociatedCbu();
+        Account account = accountRepository.findAccountByCbu(associatedCbu);
+
+        if (Objects.equals(transaction.getType(), "deposit")){
+            account.setBalance(account.getBalance() + amount);
+            return transactionRepository.save(transaction);
+        }
+
+        if (Objects.equals(transaction.getType(), "withdraw")){
+
+            if (account.getBalance() < amount){
+                throw new InsufficientFundsException("Insufficient funds");
+            }
+            account.setBalance(account.getBalance() - amount);
+            return transactionRepository.save(transaction);
+        }
+
+        throw new InvalidTransactionTypeException("Invalid transaction type");
+
+    }
+
+    public Collection<Transaction> getTransactionsByCbu(Long cbu) {
+
+        Collection<Transaction> allTransactions = transactionRepository.findAll();
+        Collection<Transaction> result = new ArrayList<>();
+
+        for (Transaction transaction : allTransactions) {
+            if (transaction.getAssociatedCbu() == cbu){
+                result.add(transaction);
+            }
+        }
+
+        return result;
+
     }
 
     public Collection<Transaction> getTransactions() {
+
         return transactionRepository.findAll();
     }
 
+
     public Optional<Transaction> findById(Long id) {
         return transactionRepository.findById(id);
+
     }
 
     public void save(Transaction transaction) {
@@ -36,38 +81,21 @@ public class TransactionService {
     }
 
     public void deleteById(Long id) {
+        Transaction transaction = transactionRepository.findTransactionById(id);
+
+        String type = transaction.getType();
+        double amount = transaction.getAmount();
+        Account account = accountRepository.findAccountByCbu(transaction.getAssociatedCbu());
+
+        if (type == "deposit"){
+            account.setBalance(account.getBalance() - amount);
+        }
+
+        if (type == "withdraw"){
+            account.setBalance(account.getBalance() + amount);
+        }
+        accountRepository.save(account);
         transactionRepository.deleteById(id);
     }
 
-    /*
-    @Transactional
-    public Account withdraw(Long cbu, Double sum) {
-        Account account = accountRepository.findAccountByCbu(cbu);
-
-        if (account.getBalance() < sum) {
-            throw new InsufficientFundsException("Insufficient funds");
-        }
-
-        account.setBalance(account.getBalance() - sum);
-        accountRepository.save(account);
-
-        return account;
-    }
-
-    @Transactional
-    public Account deposit(Long cbu, Double sum) {
-
-        if (sum <= 0) {
-            throw new DepositNegativeSumException("Cannot deposit negative sums");
-        }
-
-        Account account = accountRepository.findAccountByCbu(cbu);
-        account.setBalance(account.getBalance() + sum);
-        accountRepository.save(account);
-
-        return account;
-    }
-
-
-     */
 }
