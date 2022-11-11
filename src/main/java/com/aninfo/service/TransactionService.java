@@ -34,6 +34,7 @@ public class TransactionService {
 
         if (Objects.equals(transaction.getType(), "deposit")){
             account.setBalance(account.getBalance() + amount);
+            accountRepository.save(account);
             return transactionRepository.save(transaction);
         }
 
@@ -43,6 +44,7 @@ public class TransactionService {
                 throw new InsufficientFundsException("Insufficient funds");
             }
             account.setBalance(account.getBalance() - amount);
+            accountRepository.save(account);
             return transactionRepository.save(transaction);
         }
 
@@ -84,16 +86,17 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findTransactionById(id);
 
         String type = transaction.getType();
-        double amount = transaction.getAmount();
+
         Account account = accountRepository.findAccountByCbu(transaction.getAssociatedCbu());
 
-        if (type == "deposit"){
-            account.setBalance(account.getBalance() - amount);
+        if (Objects.equals(type, "deposit")){
+            account.setBalance(account.getBalance() - transaction.getAmount());
         }
 
-        if (type == "withdraw"){
-            account.setBalance(account.getBalance() + amount);
+        if (Objects.equals(type, "withdraw")){
+            account.setBalance(account.getBalance() + transaction.getAmount());
         }
+
         accountRepository.save(account);
         transactionRepository.deleteById(id);
     }
